@@ -1,25 +1,6 @@
 import pefile
 import binascii
 import arc4
-import time
-
-banner = '''
-
-  _____             _ _____ _____     _____             __ _         ______      _                  _             
- |_   _|           | |_   _|  __ \   / ____|           / _(_)       |  ____|    | |                | |            
-   | |  ___ ___  __| | | | | |  | | | |     ___  _ __ | |_ _  __ _  | |__  __  _| |_ _ __ __ _  ___| |_ ___  _ __ 
-   | | / __/ _ \/ _` | | | | |  | | | |    / _ \| '_ \|  _| |/ _` | |  __| \ \/ / __| '__/ _` |/ __| __/ _ \| '__|
-  _| || (_|  __/ (_| |_| |_| |__| | | |___| (_) | | | | | | | (_| | | |____ >  <| |_| | | (_| | (__| || (_) | |   
- |_____\___\___|\__,_|_____|_____/   \_____\___/|_| |_|_| |_|\__, | |______/_/\_\\__|_|  \__,_|\___|\__\___/|_|   
-                                                              __/ |                                               
-                                                             |___/                                                
-                                                    
-                                                    by: 0x0d4y
-
-'''
-
-print(banner)
-time.sleep(2)
 
 def decrypt_rc4(key, encrypt_data):
     arc4_cipher = arc4.ARC4(key)
@@ -36,7 +17,7 @@ def extract_pe_section(file_path, section_name, key_size, enc_data):
                 # Extract raw data
                 raw_data = section.get_data()
 
-                # Extract the key and the enrypted data
+                # Extract the key and the encrypted data
                 key_data = raw_data[:key_size]
                 remaining_data = raw_data[key_size:key_size + enc_data]
 
@@ -61,12 +42,22 @@ def extract_pe_section(file_path, section_name, key_size, enc_data):
     except Exception as e:
         print(f"\n[-] Error processing the PE file: {e} [-]")
 
-# Prompt the user for the PE file path, section name, key size, and encrypt data size
-pe_file_path = input("\n[+] Enter the IcedID file path: ")
-section_name = input("[+] Enter the name of the PE section to extract the encrypted config: ")
-key_size = int(input("[+] Enter the number of the first bytes for the RC4 key: "))
-enc_data = int(input("[+] Enter the number of bytes after the key where is the encrypted data: "))
-time.sleep(2)
+# Static information
+section_name = ".data"
+key_size = 8
+enc_data = 248
 
-# Call the function to extract and print section data
-extract_pe_section(pe_file_path, section_name, key_size, enc_data)
+# Loop infinito
+while True:
+    try:
+        # Prompt the user for the PE file path
+        pe_file_path = input("\n[+] Enter the IcedID file path (Ctrl+C to exit): ")
+
+        # Call the function to extract and print section data
+        extract_pe_section(pe_file_path, section_name, key_size, enc_data)
+        
+    except KeyboardInterrupt:
+        print("\n[!] Program terminated by user (Ctrl+C). Goodbye!")
+        break
+    except Exception as e:
+        print(f"\n[-] An error occurred: {e} [-]")
