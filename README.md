@@ -1,9 +1,8 @@
+# Automation Tools to Reverse Engineering
 
 <p align="center">
-  <img src="./Imagens/binjis-dragon-underfoot.png" width="400" height="400">
+  <img src="https://user-images.githubusercontent.com/26800596/168480566-89c9c935-20e3-4745-ba34-0a5a8236489d.png" width="600" height="400">
 </p>
-
-# Automation Tools to Reverse Engineering
 
 In this repository, I will store my scripts that I create to automate some processes during some Reverse Engineering tasks.
 
