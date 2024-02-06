@@ -47,7 +47,6 @@ section_name = ".data"
 key_size = 8
 enc_data = 248
 
-# Loop infinito
 while True:
     try:
         # Prompt the user for the PE file path
