@@ -64,26 +64,35 @@ def import_table(pe):
     except Exception as e:
         print(f"Error analyzing the Import Table: {e}")
 
-def disassemble_code(data, section_va):
+def disassemble_code(data, section_va, encryption_method):
     md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
-    xor_instructions = []
+    encryption_instructions = []
     conditional_jump_addresses = []
 
+    encryption_methods = {
+        'xor': {'mnemonic': 'xor'},
+        'rc4': {'mnemonic': 'cmp', 'op_str': ', 0x100'}
+    }
+
+    mnemonic = encryption_methods[encryption_method]['mnemonic']
+
     for i in md.disasm(data, section_va):
-        if i.mnemonic == 'xor':
-            xor_instructions.append(i.address)
+        if i.mnemonic == mnemonic:
+            if encryption_method == 'rc4' and not i.op_str.endswith(encryption_methods[encryption_method]['op_str']):
+                continue
+            encryption_instructions.append(i.address)
 
         if i.mnemonic.startswith('j'):
             conditional_jump_addresses.append(i.address)
 
-    xor_with_conditional_jump = []
-    for xor_addr in xor_instructions:
+    encryption_with_conditional_jump = []
+    for encryption_addr in encryption_instructions:
         for jump_addr in conditional_jump_addresses:
-            if abs(xor_addr - jump_addr) < 10:
-                xor_with_conditional_jump.append(xor_addr)
+            if abs(encryption_addr - jump_addr) < 10:
+                encryption_with_conditional_jump.append(encryption_addr)
                 break
 
-    return xor_with_conditional_jump
+    return encryption_with_conditional_jump
 
 def get_function_address(pe, address):
     for section in pe.sections:
@@ -92,49 +101,47 @@ def get_function_address(pe, address):
             return pe.OPTIONAL_HEADER.ImageBase + section.VirtualAddress + rva_offset
     return None
 
-def print_xor_occurrences(pe, section_name, xor_addresses):
+def print_occurrences(pe, section_name, addresses, encryption_method):
     found_occurrences = False
     current_function_addr = None
 
-    for xor_addr in xor_addresses:
-        function_addr = get_function_address(pe, xor_addr)
+    for addr in addresses:
+        function_addr = get_function_address(pe, addr)
         if function_addr is not None:
             if current_function_addr != function_addr:
                 found_occurrences = True
-                print(f"\tPossible XOR Operation on -> \033[1;34m0x{function_addr:08X}\033[m")
+                print(f"\tPossible {encryption_method.upper()} Operation on -> \033[1;34m0x{function_addr:08X}\033[m")
                 current_function_addr = function_addr
 
     return found_occurrences
 
-def pe_xor_patterns(file_path):
+def encryption_patterns(file_path, encryption_method):
     try:
         pe = pefile.PE(file_path)
-        sha256_hash = hashlib.sha256()
-        found_xor_occurrences = False
+        found_occurrences = False
         current_section_name = None
 
         for section in pe.sections:
             section_name = section.Name.decode('utf-8').rstrip('\x00')
             section_data = section.get_data()
 
-            xor_addresses = disassemble_code(section_data, section.VirtualAddress)
+            addresses = disassemble_code(section_data, section.VirtualAddress, encryption_method)
 
-            if xor_addresses and section_name not in (".reloc", ".rdata"):
-                found_xor_occurrences = True
+            if addresses and section_name not in (".reloc", ".rdata"):
+                found_occurrences = True
                 if current_section_name != section_name:
-                    print(f"\n\033[1;31m[!] Obfuscated Files or Information [T1027] on {section_name}\033[m\nDescription: \033[1;33mPossible obfuscation pattern identified through the XOR operation!\033[m\n")
+                    print(f"\n\033[1;31m[!] Obfuscated Files or Information [T1027] on {section_name}\033[m\nDescription: \033[1;33mPossible obfuscation pattern identified through the {encryption_method.upper()} operation!\033[m\n")
                     current_section_name = section_name
 
-                found_occurrences = print_xor_occurrences(pe, section_name, xor_addresses)
-                if not found_occurrences:
-                    print("\tNo XOR patterns found in this section.")
-
+                found = print_occurrences(pe, section_name, addresses, encryption_method)
+                if not found:
+                    print(f"\tNo {encryption_method.upper()} patterns found in this section.")
 
             else:
                 pass
 
-        if not found_xor_occurrences:
-            print(f"\nNo XOR patterns found in any section except .reloc and .rdata.\n")
+        if not found_occurrences:
+            print(f"\nNo {encryption_method.upper()} patterns found in any section except .reloc and .rdata.\n")
     except Exception as e:
         print(f"Error analyzing the PE file: {e}")
 
@@ -217,7 +224,8 @@ def main():
     try:
         calculate_hash(file_path)
         main_func(file_path)
-        pe_xor_patterns(file_path)
+        encryption_patterns(file_path, 'rc4')
+        encryption_patterns(file_path, 'xor')
         find_interesting_strings(file_path)
     except Exception as e:
         print(f"Error: {e}")
