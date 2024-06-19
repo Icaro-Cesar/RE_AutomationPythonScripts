@@ -17,7 +17,7 @@ def decrypt_rc4(key, encrypt_data):
     arc4_cipher = arc4.ARC4(key)
     return arc4_cipher.decrypt(encrypt_data)
 
-dec_function = "" # <= Dceryption Function Address
+dec_function = "" # <= Decryption Function Address without ""
 cross_references =  bv.get_code_refs(dec_function)
 for xrefs in cross_references:
         encrypted_data = xrefs.mlil.params[0].constant
